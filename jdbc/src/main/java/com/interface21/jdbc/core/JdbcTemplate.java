@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,16 +43,19 @@ public class JdbcTemplate {
         }
     }
 
-    public <T> T queryForObject(final String sql, final RowMapper<T> mapper, final Object... params) {
+    public <T> Optional<T> queryForObject(final String sql, final RowMapper<T> mapper, final Object... params) {
         try (final Connection conn = getConnection();
              final PreparedStatement ps = prepareStatement(conn, sql, params);
              final ResultSet rs = ps.executeQuery()) {
 
-            if (rs.next()) {
-                return mapper.mapRowToObject(rs);
+            if (!rs.next()) {
+                return Optional.empty();
             }
-
-            return null;
+            T result = mapper.mapRowToObject(rs);
+//            if (rs.next()) {
+//                throw new IllegalStateException("단건 조회인데 결과가 2건 이상입니다.");
+//            }
+            return Optional.of(result);
         } catch (final SQLException e) {
             log.error("SQL 실행 실패: ", e);
             throw new RuntimeException("SQL 실행 실패: ", e);
