@@ -1,5 +1,6 @@
 package com.techcourse.dao;
 
+import com.interface21.jdbc.core.JdbcTemplate;
 import com.techcourse.config.DataSourceConfig;
 import com.techcourse.domain.User;
 import com.techcourse.support.jdbc.init.DatabasePopulatorUtils;
@@ -14,9 +15,15 @@ class UserDaoTest {
 
     @BeforeEach
     void setup() {
-        DatabasePopulatorUtils.execute(DataSourceConfig.getInstance());
+        var dataSource = DataSourceConfig.getInstance();
 
-        userDao = new UserDao(DataSourceConfig.getInstance());
+        // DB 초기화
+        DatabasePopulatorUtils.execute(dataSource);
+
+        // UserDao가 DataSource 대신 JdbcTemplate을 받도록 변경
+        var jdbcTemplate = new JdbcTemplate(dataSource);
+        userDao = new UserDao(jdbcTemplate);
+
         final var user = new User("gugu", "password", "hkkang@woowahan.com");
         userDao.insert(user);
     }
