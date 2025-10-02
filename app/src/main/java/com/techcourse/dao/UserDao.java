@@ -72,4 +72,10 @@ public class UserDao {
                 rs.getString("email")
         ), account);
     }
+
+    public void deleteAll() {
+        final String sql = "delete from users";
+
+        jdbcTemplate.update(sql);
+    }
 }

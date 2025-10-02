@@ -51,10 +51,11 @@ public class JdbcTemplate {
             if (!rs.next()) {
                 return Optional.empty();
             }
+
             T result = mapper.mapRowToObject(rs);
-//            if (rs.next()) {
-//                throw new IllegalStateException("단건 조회인데 결과가 2건 이상입니다.");
-//            }
+            if (rs.next()) {
+                throw new IllegalStateException("단건 조회인데 결과가 2건 이상입니다.");
+            }
             return Optional.of(result);
         } catch (final SQLException e) {
             log.error("SQL 실행 실패: ", e);

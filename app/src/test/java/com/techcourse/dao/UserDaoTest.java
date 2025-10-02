@@ -24,6 +24,7 @@ class UserDaoTest {
         var jdbcTemplate = new JdbcTemplate(dataSource);
         userDao = new UserDao(jdbcTemplate);
 
+        userDao.deleteAll();
         final var user = new User("gugu", "password", "hkkang@woowahan.com");
         userDao.insert(user);
     }
@@ -37,7 +38,7 @@ class UserDaoTest {
 
     @Test
     void findById() {
-        final var user = userDao.findById(1L).get();
+        final var user = userDao.findByAccount("gugu").get();
 
         assertThat(user.getAccount()).isEqualTo("gugu");
     }
@@ -64,12 +65,12 @@ class UserDaoTest {
     @Test
     void update() {
         final var newPassword = "password99";
-        final var user = userDao.findById(1L).get();
+        final var user = userDao.findByAccount("gugu").get();
         user.changePassword(newPassword);
 
         userDao.update(user);
 
-        final var actual = userDao.findById(1L).get();
+        final var actual = userDao.findByAccount("gugu").get();
 
         assertThat(actual.getPassword()).isEqualTo(newPassword);
     }
