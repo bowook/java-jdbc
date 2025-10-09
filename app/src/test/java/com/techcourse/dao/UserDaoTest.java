@@ -21,8 +21,6 @@ class UserDaoTest {
 
         jdbcTemplate.update("DROP TABLE users IF EXISTS");
         DatabasePopulatorUtils.execute(dataSource);
-
-        var jdbcTemplate = new JdbcTemplate(dataSource);
         userDao = new UserDao(jdbcTemplate);
 
         final var user = new User("gugu", "password", "hkkang@woowahan.com");
