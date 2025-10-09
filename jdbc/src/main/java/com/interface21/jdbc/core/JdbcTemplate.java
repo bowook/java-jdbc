@@ -1,5 +1,6 @@
 package com.interface21.jdbc.core;
 
+import com.interface21.dao.DataAccessException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -21,56 +22,74 @@ public class JdbcTemplate {
         this.dataSource = dataSource;
     }
 
-    public void insert(final String sql, final Object... params) {
-        try (final Connection conn = getConnection();
-             final PreparedStatement ps = prepareStatement(conn, sql, params)) {
-
-            ps.executeUpdate();
-        } catch (final SQLException e) {
-            log.error("SQL 실행 실패: ", e);
-            throw new RuntimeException("SQL 실행 실패: ", e);
-        }
+    /**
+     * INSERT, UPDATE, DELETE 쿼리를 위한 메서드 (수동 파라미터 설정)
+     */
+    public int update(final String sql, final PreparedStatementSetter pss) {
+        return executeUpdate(sql, pss);
     }
 
+    /**
+     * INSERT, UPDATE, DELETE 쿼리를 위한 메서드 (자동 파라미터 설정)
+     */
     public int update(final String sql, final Object... params) {
-        try (final Connection conn = getConnection();
-             final PreparedStatement ps = prepareStatement(conn, sql, params)) {
+        return executeUpdate(sql, createPss(params));
+    }
 
+    /**
+     * 다건 조회를 위한 메서드 (수동 파라미터 설정)
+     */
+    public <T> List<T> queryForList(final String sql, final RowMapper<T> mapper, final PreparedStatementSetter pss) {
+        return executeQuery(sql, pss, mapper);
+    }
+
+    /**
+     * 다건 조회를 위한 메서드 (자동 파라미터 설정)
+     */
+    public <T> List<T> queryForList(final String sql, final RowMapper<T> mapper, final Object... params) {
+        return executeQuery(sql, createPss(params), mapper);
+    }
+
+    /**
+     * 단건 조회를 위한 메서드 (수동 파라미터 설정)
+     */
+    public <T> Optional<T> queryForObject(
+            final String sql,
+            final RowMapper<T> mapper,
+            final PreparedStatementSetter pss) {
+        final List<T> results = queryForList(sql, mapper, pss);
+
+        return processSingleResult(results);
+    }
+
+    /**
+     * 단건 조회를 위한 메서드 (자동 파라미터 설정)
+     */
+    public <T> Optional<T> queryForObject(
+            final String sql,
+            final RowMapper<T> mapper,
+            final Object... params) {
+        final List<T> results = queryForList(sql, mapper, params);
+
+        return processSingleResult(results);
+    }
+
+    private int executeUpdate(final String sql, final PreparedStatementSetter pss) {
+        try (final Connection conn = getConnection();
+             final PreparedStatement ps = createPreparedStatement(conn, sql, pss)) {
             return ps.executeUpdate();
         } catch (final SQLException e) {
             log.error("SQL 실행 실패: ", e);
-            throw new RuntimeException("SQL 실행 실패: ", e);
+            throw new DataAccessException("SQL 실행 실패", e);
         }
     }
 
-    public <T> Optional<T> queryForObject(final String sql, final RowMapper<T> mapper, final Object... params) {
+    private <T> List<T> executeQuery(final String sql, final PreparedStatementSetter pss, final RowMapper<T> mapper) {
         try (final Connection conn = getConnection();
-             final PreparedStatement ps = prepareStatement(conn, sql, params);
+             final PreparedStatement ps = createPreparedStatement(conn, sql, pss);
              final ResultSet rs = ps.executeQuery()) {
 
-            if (!rs.next()) {
-                return Optional.empty();
-            }
-
-            T result = mapper.mapRowToObject(rs);
-            if (rs.next()) {
-                throw new IllegalStateException("단건 조회인데 결과가 2건 이상입니다.");
-            }
-            return Optional.of(result);
-        } catch (final SQLException e) {
-            log.error("SQL 실행 실패: ", e);
-            throw new RuntimeException("SQL 실행 실패: ", e);
-        }
-    }
-
-    // 현재는 findAll에서만 사용이되고 있어서, 가변인자를 받을 필요가 없을 것 같은데, 재사용성을 위해서는 있는게 좋아보임.
-    public <T> List<T> queryForList(final String sql, final RowMapper<T> mapper, final Object... params) {
-        List<T> results = new ArrayList<>();
-
-        try (final Connection conn = getConnection();
-             final PreparedStatement ps = prepareStatement(conn, sql, params);
-             final ResultSet rs = ps.executeQuery()) {
-
+            final List<T> results = new ArrayList<>();
             while (rs.next()) {
                 results.add(mapper.mapRowToObject(rs));
             }
@@ -78,30 +97,46 @@ public class JdbcTemplate {
             return results;
         } catch (final SQLException e) {
             log.error("SQL 실행 실패: ", e);
-            throw new RuntimeException("SQL 실행 실패: ", e);
+            throw new DataAccessException("SQL 실행 실패", e);
         }
     }
 
+    private <T> Optional<T> processSingleResult(final List<T> results) {
+        if (results.isEmpty()) {
+            return Optional.empty();
+        }
+        if (results.size() > 1) {
+            throw new DataAccessException("단건 조회인데 결과가 " + results.size() + "건 이상입니다.");
+        }
+
+        return Optional.of(results.getFirst());
+    }
+
+    private PreparedStatement createPreparedStatement(
+            final Connection conn,
+            final String sql,
+            final PreparedStatementSetter pss) throws SQLException {
+        final PreparedStatement ps = conn.prepareStatement(sql);
+        log.debug("query : {}", sql);
+        pss.setValues(ps);
+
+        return ps;
+    }
+
+    private PreparedStatementSetter createPss(final Object... params) {
+        return ps -> {
+            for (int i = 0; i < params.length; i++) {
+                ps.setObject(i + 1, params[i]);
+            }
+        };
+    }
 
     private Connection getConnection() {
         try {
             return dataSource.getConnection();
         } catch (final SQLException e) {
             log.error("DB 연결 실패: ", e);
-            throw new RuntimeException("DB 연결 실패: ", e);
+            throw new DataAccessException("DB 연결 실패", e);
         }
-    }
-
-    private PreparedStatement prepareStatement(
-            final Connection conn,
-            final String sql,
-            final Object... params) throws SQLException {
-        PreparedStatement ps = conn.prepareStatement(sql);
-        log.debug("query : {}", sql);
-        for (int i = 0; i < params.length; i++) {
-            ps.setObject(i + 1, params[i]);
-        }
-
-        return ps;
     }
 }

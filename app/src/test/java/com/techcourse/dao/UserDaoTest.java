@@ -12,19 +12,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 class UserDaoTest {
 
     private UserDao userDao;
+    private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void setup() {
         var dataSource = DataSourceConfig.getInstance();
+        this.jdbcTemplate = new JdbcTemplate(dataSource);
 
-        // DB 초기화
+        jdbcTemplate.update("DROP TABLE users IF EXISTS");
         DatabasePopulatorUtils.execute(dataSource);
 
-        // UserDao가 DataSource 대신 JdbcTemplate을 받도록 변경
         var jdbcTemplate = new JdbcTemplate(dataSource);
         userDao = new UserDao(jdbcTemplate);
 
-        userDao.deleteAll();
         final var user = new User("gugu", "password", "hkkang@woowahan.com");
         userDao.insert(user);
     }
@@ -38,7 +38,7 @@ class UserDaoTest {
 
     @Test
     void findById() {
-        final var user = userDao.findByAccount("gugu").get();
+        final var user = userDao.findById(1L).get();
 
         assertThat(user.getAccount()).isEqualTo("gugu");
     }
@@ -57,7 +57,7 @@ class UserDaoTest {
         final var user = new User(account, "password", "hkkang@woowahan.com");
         userDao.insert(user);
 
-        final var actual = userDao.findById(2L).get();
+        final var actual = userDao.findByAccount(account).get();
 
         assertThat(actual.getAccount()).isEqualTo(account);
     }
