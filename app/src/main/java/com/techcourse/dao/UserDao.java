@@ -1,6 +1,7 @@
 package com.techcourse.dao;
 
 import com.interface21.jdbc.core.JdbcTemplate;
+import com.interface21.jdbc.core.PreparedStatementSetter;
 import com.interface21.jdbc.core.RowMapper;
 import com.techcourse.domain.User;
 import java.util.List;
@@ -32,16 +33,26 @@ public class UserDao {
 
     public List<User> findAll() {
         final String sql = "select id, account, password, email from users";
+
         return jdbcTemplate.queryForList(sql, userRowMapper);
     }
 
     public Optional<User> findById(final Long id) {
         final String sql = "select id, account, password, email from users where id = ?";
+
         return jdbcTemplate.queryForObject(sql, userRowMapper, id);
     }
 
     public Optional<User> findByAccount(final String account) {
         final String sql = "select id, account, password, email from users where account = ?";
+
         return jdbcTemplate.queryForObject(sql, userRowMapper, account);
+    }
+
+    public Optional<User> findByAccountWithPss(final String account) {
+        final String sql = "SELECT id, account, password, email FROM users WHERE account = ?";
+        PreparedStatementSetter pss = ps -> ps.setString(1, account);
+
+        return jdbcTemplate.queryForObject(sql, userRowMapper, pss);
     }
 }

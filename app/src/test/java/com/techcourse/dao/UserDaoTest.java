@@ -80,4 +80,15 @@ class UserDaoTest {
                         assertThat(actual.getPassword()).isEqualTo(newPassword)
                 );
     }
+
+    @Test
+    void findByAccount_withPreparedStatementSetter() {
+        final var account = "gugu";
+
+        assertThat(userDao.findByAccountWithPss(account))
+                .isPresent()
+                .hasValueSatisfying(user ->
+                        assertThat(user.getAccount()).isEqualTo(account)
+                );
+    }
 }
