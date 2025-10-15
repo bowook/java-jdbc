@@ -36,17 +36,21 @@ class UserDaoTest {
 
     @Test
     void findById() {
-        final var user = userDao.findById(1L).get();
-
-        assertThat(user.getAccount()).isEqualTo("gugu");
+        assertThat(userDao.findById(1L))
+                .isPresent()
+                .hasValueSatisfying(user ->
+                        assertThat(user.getAccount()).isEqualTo("gugu")
+                );
     }
 
     @Test
     void findByAccount() {
         final var account = "gugu";
-        final var user = userDao.findByAccount(account).get();
-
-        assertThat(user.getAccount()).isEqualTo(account);
+        assertThat(userDao.findByAccount(account))
+                .isPresent()
+                .hasValueSatisfying(user ->
+                        assertThat(user.getAccount()).isEqualTo(account)
+                );
     }
 
     @Test
@@ -55,21 +59,25 @@ class UserDaoTest {
         final var user = new User(account, "password", "hkkang@woowahan.com");
         userDao.insert(user);
 
-        final var actual = userDao.findByAccount(account).get();
-
-        assertThat(actual.getAccount()).isEqualTo(account);
+        assertThat(userDao.findByAccount(account))
+                .isPresent()
+                .hasValueSatisfying(actual ->
+                        assertThat(actual.getAccount()).isEqualTo(account)
+                );
     }
 
     @Test
     void update() {
         final var newPassword = "password99";
-        final var user = userDao.findByAccount("gugu").get();
+        final var user = userDao.findByAccount("gugu").orElseThrow();
         user.changePassword(newPassword);
 
         userDao.update(user);
 
-        final var actual = userDao.findByAccount("gugu").get();
-
-        assertThat(actual.getPassword()).isEqualTo(newPassword);
+        assertThat(userDao.findByAccount("gugu"))
+                .isPresent()
+                .hasValueSatisfying(actual ->
+                        assertThat(actual.getPassword()).isEqualTo(newPassword)
+                );
     }
 }
