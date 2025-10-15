@@ -8,14 +8,13 @@ import java.util.Optional;
 
 public class UserDao {
 
-    private final JdbcTemplate jdbcTemplate;
-
-    private final RowMapper<User> userRowMapper = rs -> new User(
+    private static final RowMapper<User> userRowMapper = rs -> new User(
             rs.getLong("id"),
             rs.getString("account"),
             rs.getString("password"),
             rs.getString("email")
     );
+    private final JdbcTemplate jdbcTemplate;
 
     public UserDao(final JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
