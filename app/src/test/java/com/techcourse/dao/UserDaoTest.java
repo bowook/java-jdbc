@@ -12,19 +12,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 class UserDaoTest {
 
     private UserDao userDao;
+    private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void setup() {
         var dataSource = DataSourceConfig.getInstance();
+        this.jdbcTemplate = new JdbcTemplate(dataSource);
 
-        // DB 초기화
+        jdbcTemplate.update("DROP TABLE users IF EXISTS");
         DatabasePopulatorUtils.execute(dataSource);
-
-        // UserDao가 DataSource 대신 JdbcTemplate을 받도록 변경
-        var jdbcTemplate = new JdbcTemplate(dataSource);
         userDao = new UserDao(jdbcTemplate);
 
-        userDao.deleteAll();
         final var user = new User("gugu", "password", "hkkang@woowahan.com");
         userDao.insert(user);
     }
@@ -38,17 +36,21 @@ class UserDaoTest {
 
     @Test
     void findById() {
-        final var user = userDao.findByAccount("gugu").get();
-
-        assertThat(user.getAccount()).isEqualTo("gugu");
+        assertThat(userDao.findById(1L))
+                .isPresent()
+                .hasValueSatisfying(user ->
+                        assertThat(user.getAccount()).isEqualTo("gugu")
+                );
     }
 
     @Test
     void findByAccount() {
         final var account = "gugu";
-        final var user = userDao.findByAccount(account).get();
-
-        assertThat(user.getAccount()).isEqualTo(account);
+        assertThat(userDao.findByAccount(account))
+                .isPresent()
+                .hasValueSatisfying(user ->
+                        assertThat(user.getAccount()).isEqualTo(account)
+                );
     }
 
     @Test
@@ -57,21 +59,36 @@ class UserDaoTest {
         final var user = new User(account, "password", "hkkang@woowahan.com");
         userDao.insert(user);
 
-        final var actual = userDao.findById(2L).get();
-
-        assertThat(actual.getAccount()).isEqualTo(account);
+        assertThat(userDao.findByAccount(account))
+                .isPresent()
+                .hasValueSatisfying(actual ->
+                        assertThat(actual.getAccount()).isEqualTo(account)
+                );
     }
 
     @Test
     void update() {
         final var newPassword = "password99";
-        final var user = userDao.findByAccount("gugu").get();
+        final var user = userDao.findByAccount("gugu").orElseThrow();
         user.changePassword(newPassword);
 
         userDao.update(user);
 
-        final var actual = userDao.findByAccount("gugu").get();
+        assertThat(userDao.findByAccount("gugu"))
+                .isPresent()
+                .hasValueSatisfying(actual ->
+                        assertThat(actual.getPassword()).isEqualTo(newPassword)
+                );
+    }
 
-        assertThat(actual.getPassword()).isEqualTo(newPassword);
+    @Test
+    void findByAccount_withPreparedStatementSetter() {
+        final var account = "gugu";
+
+        assertThat(userDao.findByAccountWithPss(account))
+                .isPresent()
+                .hasValueSatisfying(user ->
+                        assertThat(user.getAccount()).isEqualTo(account)
+                );
     }
 }
