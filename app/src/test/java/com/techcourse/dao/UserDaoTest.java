@@ -22,7 +22,7 @@ class UserDaoTest {
         var dataSource = DataSourceConfig.getInstance();
         this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.connection = dataSource.getConnection();
-        jdbcTemplate.update(connection, "DROP TABLE users IF EXISTS");
+        jdbcTemplate.update(connection, "DROP TABLE IF EXISTS users");
         DatabasePopulatorUtils.execute(dataSource);
         userDao = new UserDao(jdbcTemplate);
 
