@@ -4,6 +4,8 @@ import com.interface21.jdbc.core.JdbcTemplate;
 import com.techcourse.config.DataSourceConfig;
 import com.techcourse.domain.User;
 import com.techcourse.support.jdbc.init.DatabasePopulatorUtils;
+import java.sql.Connection;
+import java.sql.SQLException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -13,13 +15,14 @@ class UserDaoTest {
 
     private UserDao userDao;
     private JdbcTemplate jdbcTemplate;
+    private Connection connection;
 
     @BeforeEach
-    void setup() {
+    void setup() throws SQLException {
         var dataSource = DataSourceConfig.getInstance();
         this.jdbcTemplate = new JdbcTemplate(dataSource);
-
-        jdbcTemplate.update("DROP TABLE users IF EXISTS");
+        this.connection = dataSource.getConnection();
+        jdbcTemplate.update(connection, "DROP TABLE users IF EXISTS");
         DatabasePopulatorUtils.execute(dataSource);
         userDao = new UserDao(jdbcTemplate);
 
@@ -72,7 +75,7 @@ class UserDaoTest {
         final var user = userDao.findByAccount("gugu").orElseThrow();
         user.changePassword(newPassword);
 
-        userDao.update(user);
+        userDao.update(user, connection);
 
         assertThat(userDao.findByAccount("gugu"))
                 .isPresent()

@@ -32,8 +32,12 @@ public class JdbcTemplate {
     /**
      * INSERT, UPDATE, DELETE 쿼리를 위한 메서드 (자동 파라미터 설정)
      */
-    public int update(final String sql, final Object... params) {
-        return executeUpdate(sql, createPss(params));
+    public int update(final Connection connection, final String sql, final Object... params) {
+        return executeUpdate(connection, sql, createPss(params));
+    }
+
+    public int update(final Connection connection, final String sql, final PreparedStatementSetter pss) {
+        return executeUpdate(connection, sql, pss);
     }
 
     /**
@@ -75,8 +79,17 @@ public class JdbcTemplate {
     }
 
     private int executeUpdate(final String sql, final PreparedStatementSetter pss) {
-        try (final Connection conn = getConnection();
-             final PreparedStatement ps = createPreparedStatement(conn, sql, pss)) {
+        try (final Connection connection = dataSource.getConnection();
+             final PreparedStatement ps = createPreparedStatement(connection, sql, pss)) {
+            return ps.executeUpdate();
+        } catch (final SQLException e) {
+            log.error("SQL 실행 실패: ", e);
+            throw new DataAccessException("SQL 실행 실패", e);
+        }
+    }
+
+    private int executeUpdate(final Connection connection, final String sql, final PreparedStatementSetter pss) {
+        try (final PreparedStatement ps = createPreparedStatement(connection, sql, pss)) {
             return ps.executeUpdate();
         } catch (final SQLException e) {
             log.error("SQL 실행 실패: ", e);
