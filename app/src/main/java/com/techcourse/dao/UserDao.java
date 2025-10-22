@@ -4,6 +4,7 @@ import com.interface21.jdbc.core.JdbcTemplate;
 import com.interface21.jdbc.core.PreparedStatementSetter;
 import com.interface21.jdbc.core.RowMapper;
 import com.techcourse.domain.User;
+import java.sql.Connection;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,12 +24,18 @@ public class UserDao {
 
     public void insert(final User user) {
         final String sql = "insert into users (account, password, email) values (?, ?, ?)";
-        jdbcTemplate.update(sql, user.getAccount(), user.getPassword(), user.getEmail());
+        PreparedStatementSetter pss = ps -> {
+            ps.setString(1, user.getAccount());
+            ps.setObject(2, user.getPassword());
+            ps.setString(3, user.getEmail());
+        };
+
+        jdbcTemplate.update(sql, pss);
     }
 
-    public void update(final User user) {
+    public void update(final User user, Connection connection) {
         final String sql = "update users set password = ?, email = ? where account = ?";
-        jdbcTemplate.update(sql, user.getPassword(), user.getEmail(), user.getAccount());
+        jdbcTemplate.update(connection, sql, user.getPassword(), user.getEmail(), user.getAccount());
     }
 
     public List<User> findAll() {
