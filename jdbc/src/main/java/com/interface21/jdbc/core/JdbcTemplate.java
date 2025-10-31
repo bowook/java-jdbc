@@ -76,10 +76,10 @@ public class JdbcTemplate {
     }
 
     private int executeUpdate(final String sql, final PreparedStatementSetter pss) {
-        Connection connection = null;
+        Connection conn = null;
         try {
-            connection = getConnection();
-            try (final PreparedStatement ps = createPreparedStatement(connection, sql, pss)) {
+            conn = getConnection();
+            try (final PreparedStatement ps = createPreparedStatement(conn, sql, pss)) {
                 return ps.executeUpdate();
             }
         } catch (final SQLException e) {
@@ -87,7 +87,7 @@ public class JdbcTemplate {
             throw new DataAccessException("SQL 실행 실패", e);
         } finally {
             try {
-                DataSourceUtils.releaseConnection(connection, this.dataSource);
+                DataSourceUtils.releaseConnection(conn, this.dataSource);
             } catch (SQLException e) {
                 log.error("Connection 릴리즈 실패", e);
             }
